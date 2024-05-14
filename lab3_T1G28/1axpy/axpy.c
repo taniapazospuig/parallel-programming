@@ -5,13 +5,17 @@
 
 void axpy_cpu(int n, double alpha, double* x, double* y)
 {
-    
-
+    for(int i=0; i<n; i++) {
+        y[i] = alpha * x[i] + y[i];
+    }
 }
 
 void axpy_gpu(int n, double alpha, double* x, double* y)
 {
-    
+    #pragma acc parallel loop
+    for(int i=0; i<n; i++) {
+        y[i] = alpha * x[i] + y[i];
+    }
 
 }
 
@@ -27,7 +31,7 @@ int main(int argc, char **argv)
     double *y_cpu = (double*) malloc (vec_size*sizeof(double));
     double *y_gpu = (double*) malloc (vec_size*sizeof(double));
 
-
+    //#pragma acc enter data create(x[0:vec_size], y_gpu[0:vec_size])
     // fill vectors with sinusoidals for testing the code
     for(int i = 0; i < vec_size; i++)
     {
@@ -55,7 +59,6 @@ int main(int argc, char **argv)
     time_gpu = time_end - time_start;
 
 
-
     // compare gpu and cpu results
     double norm2 = 0.0;
     for(int i = 0; i < vec_size; i++)
@@ -66,9 +69,10 @@ int main(int argc, char **argv)
     printf("axpy comparison cpu vs gpu error: %e, size %d\n",
            norm2, vec_size);
 
-    double speed_up = 1; // TODO
+    double speed_up = time_cpu / time_gpu; // TODO
     printf("CPU Time: %lf - GPU Time: %lf - speed-up = %lf\n", time_cpu, time_gpu, speed_up);
 
+    //#pragma acc exit data delete(x[0:vec_size], y_gpu[0:vec_size])
     // free allocated memory
     free(x);
     free(y_cpu);
