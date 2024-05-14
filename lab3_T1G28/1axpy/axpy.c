@@ -12,7 +12,7 @@ void axpy_cpu(int n, double alpha, double* x, double* y)
 
 void axpy_gpu(int n, double alpha, double* x, double* y)
 {
-    #pragma acc parallel loop
+    #pragma acc parallel loop present(x[0:n], y[0:n]) 
     for(int i=0; i<n; i++) {
         y[i] = alpha * x[i] + y[i];
     }
@@ -31,7 +31,6 @@ int main(int argc, char **argv)
     double *y_cpu = (double*) malloc (vec_size*sizeof(double));
     double *y_gpu = (double*) malloc (vec_size*sizeof(double));
 
-    //#pragma acc enter data create(x[0:vec_size], y_gpu[0:vec_size])
     // fill vectors with sinusoidals for testing the code
     for(int i = 0; i < vec_size; i++)
     {
@@ -40,15 +39,17 @@ int main(int argc, char **argv)
         y_gpu[i] = cos(i*0.01);
     }
 
-
+    
+    
     time_start = omp_get_wtime();
 
+    #pragma acc data copyin(x[0:vec_size], y_gpu[0:vec_size])
     for(int i = 0; i < 100; i++)
         axpy_cpu(vec_size, alpha, x, y_cpu);
 
     time_end = omp_get_wtime();
     time_cpu = time_end - time_start;
-
+    
 
     time_start = omp_get_wtime();
 
@@ -72,7 +73,6 @@ int main(int argc, char **argv)
     double speed_up = time_cpu / time_gpu; // TODO
     printf("CPU Time: %lf - GPU Time: %lf - speed-up = %lf\n", time_cpu, time_gpu, speed_up);
 
-    //#pragma acc exit data delete(x[0:vec_size], y_gpu[0:vec_size])
     // free allocated memory
     free(x);
     free(y_cpu);
