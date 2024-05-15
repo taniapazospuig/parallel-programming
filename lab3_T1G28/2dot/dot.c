@@ -5,15 +5,22 @@
 
 double dot_product_cpu(int n, double* x, double* y)
 {
-
+    double sum = 0.0;
+    for (int i = 0; i < n; i++) {
+        sum += x[i] * y[i];
+    }
+    return sum;
 }
 
 double dot_product_gpu(int n, double* x, double* y)
 {
-
+    double sum = 0.0;
+    #pragma acc parallel loop reduction(+:sum) present(x[0:n], y[0:n])
+    for (int i = 0; i < n; i++) {
+        sum += x[i] * y[i];
+    }
+    return sum;
 }
-
-
 
 int main(int argc, char **argv)
 {
@@ -31,7 +38,6 @@ int main(int argc, char **argv)
         y[i] = cos(i*0.01);
     }
 
-
     time_start = omp_get_wtime();
 
     for(int i = 0; i < 100; i++)
@@ -39,8 +45,8 @@ int main(int argc, char **argv)
 
     time_end = omp_get_wtime();
     time_cpu = time_end - time_start;
-
-
+    
+    #pragma acc enter data copyin(x[0:vec_size], y[0:vec_size]) 
     time_start = omp_get_wtime();
 
     for(int i = 0; i < 100; i++)
@@ -48,12 +54,12 @@ int main(int argc, char **argv)
 
     time_end = omp_get_wtime();
     time_gpu = time_end - time_start;
-
+    #pragma acc exit data delete(x[0:vec_size], y[0:vec_size]) 
 
     printf("dot product comparison cpu vs gpu %e, size %d\n",
            dot_cpu - dot_gpu, vec_size);
 
-    double speed_up = 1; // TODO
+    double speed_up = time_cpu / time_gpu; // TODO
     printf("CPU Time: %lf - GPU Time: %lf - Speed up: %lf \n", time_cpu, time_gpu, speed_up);
 
     // free allocated memory
